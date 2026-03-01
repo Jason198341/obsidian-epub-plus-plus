@@ -1,0 +1,338 @@
+/* ─── EPUB++ Plugin Styles ──────────────────── */
+
+.epp-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Header ───────────────────────────────── */
+
+.epp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.epp-nav-btn {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.epp-nav-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.epp-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.epp-progress-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ─── Viewer ───────────────────────────────── */
+
+.epp-viewer {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--background-primary);
+}
+
+.epp-viewer iframe {
+  border: none !important;
+}
+
+/* ─── Progress Bar ─────────────────────────── */
+
+.epp-progress-bar {
+  height: 3px;
+  background: var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.epp-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* ─── Footer ───────────────────────────────── */
+
+.epp-footer {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.epp-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.epp-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.epp-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.epp-btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* ─── Highlight Popup ──────────────────────── */
+
+.epp-hl-popup {
+  position: absolute;
+  z-index: 100;
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.epp-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  padding: 0;
+}
+
+.epp-color-btn:hover {
+  border-color: var(--text-normal);
+  transform: scale(1.15);
+}
+
+.epp-delete-btn {
+  background: var(--background-secondary) !important;
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* ─── TOC Panel ────────────────────────────── */
+
+.epp-toc,
+.epp-highlight-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 260px;
+  height: 100%;
+  background: var(--background-primary);
+  border-left: 1px solid var(--background-modifier-border);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+}
+
+.epp-toc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.epp-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.epp-close-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.epp-toc-list,
+.epp-highlight-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.epp-toc-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-normal);
+  transition: background 0.1s;
+}
+
+.epp-toc-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* ─── Highlight Panel Items ────────────────── */
+
+.epp-hl-chapter {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.epp-hl-item {
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.epp-hl-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.epp-hl-text {
+  font-size: 12px;
+  color: var(--text-normal);
+  line-height: 1.4;
+}
+
+.epp-hl-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.epp-hl-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ─── Note Modal ───────────────────────────── */
+
+.epp-note-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 16px;
+  z-index: 200;
+  width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.epp-note-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 13px;
+  resize: vertical;
+  font-family: var(--font-text);
+}
+
+.epp-note-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.epp-note-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ─── Status ───────────────────────────────── */
+
+.epp-status {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  min-height: 20px;
+  flex-shrink: 0;
+}
+
+/* ─── Utilities ────────────────────────────── */
+
+.epp-hidden {
+  display: none !important;
+}
+
+/* ─── epub.js highlight overrides ──────────── */
+
+.epp-highlight {
+  cursor: pointer;
+}
+
+/* ─── Scrollbar styling ────────────────────── */
+
+.epp-toc-list::-webkit-scrollbar,
+.epp-highlight-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.epp-toc-list::-webkit-scrollbar-thumb,
+.epp-highlight-list::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+}

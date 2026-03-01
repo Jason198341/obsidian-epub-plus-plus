@@ -1,0 +1,10 @@
+{
+  "id": "epub-plus-plus",
+  "name": "EPUB++",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "Read EPUBs, highlight text, auto-generate organized notes",
+  "author": "jasonmoon",
+  "authorUrl": "https://jasonmoon.dev",
+  "isDesktopOnly": true
+}

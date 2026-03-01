@@ -1,0 +1,22 @@
+{
+  "name": "obsidian-epub-plus-plus",
+  "version": "1.0.0",
+  "description": "EPUB reader with auto highlight-to-note for Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": ["obsidian", "epub", "reader", "highlights"],
+  "author": "jasonmoon",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "epubjs": "^0.3.93",
+    "obsidian": "latest"
+  }
+}
