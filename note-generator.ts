@@ -31,21 +31,38 @@ export class NoteGenerator {
     const today = new Date().toISOString().slice(0, 10);
     const pct = Math.round(progress * 100);
 
+    // ── Preserve existing AI answers before regeneration ──
+    const filePath = `${options.savePath}/${safeTitle}.md`;
+    const existingFile = this.app.vault.getAbstractFileByPath(filePath);
+    let preserved = new Map<string, string>();
+    let createdDate = today;
+
+    if (existingFile && existingFile instanceof TFile) {
+      const existingContent = await this.app.vault.read(existingFile);
+      preserved = this.extractPreservedBlocks(existingContent);
+      // Preserve original created date
+      const createdMatch = existingContent.match(/^created:\s*(.+)$/m);
+      if (createdMatch) createdDate = createdMatch[1].trim();
+    }
+
     // Collect questions (blue + has note)
     const questions = highlights.filter(
       (h) => h.color === options.questionColor && h.note.trim().length > 0
     );
 
-    // Get AI answers if enabled
+    // Get AI answers if enabled (only for questions WITHOUT preserved answers)
     const aiAnswers = new Map<string, string>();
     if (options.enableAI && questions.length > 0) {
       const config = getClaudeConfig(this.app);
       if (config) {
         const model = options.aiModel || config.model || "haiku";
+        const unanswered = questions.filter(
+          (q) => !preserved.has(q.id) && !preserved.has(q.note)
+        );
         let done = 0;
 
-        for (const q of questions) {
-          options.onProgress?.(done + 1, questions.length);
+        for (const q of unanswered) {
+          options.onProgress?.(done + 1, unanswered.length);
           try {
             const answer = await this.askClaude(
               config.claudePath,
@@ -65,6 +82,11 @@ export class NoteGenerator {
       }
     }
 
+    // Count total AI answers (new + preserved)
+    const totalAiAnswers = aiAnswers.size + [...preserved.keys()].filter(
+      (k) => highlights.some((h) => h.id === k || h.note === k)
+    ).length;
+
     // Group highlights by chapter
     const grouped = this.groupByChapter(highlights);
 
@@ -74,7 +96,7 @@ export class NoteGenerator {
     // Frontmatter
     md += "---\n";
     md += `tags: [독서노트, ${safeTitle}${author ? `, ${author}` : ""}]\n`;
-    md += `created: ${today}\n`;
+    md += `created: ${createdDate}\n`;
     md += `modified: ${today}\n`;
     md += `status: active\n`;
     md += `category: resource\n`;
@@ -83,16 +105,16 @@ export class NoteGenerator {
     md += `source: "[[${epubPath}]]"\n`;
     md += `progress: ${pct}%\n`;
     md += `highlights: ${highlights.length}\n`;
-    if (aiAnswers.size > 0) {
-      md += `ai_answers: ${aiAnswers.size}\n`;
+    if (totalAiAnswers > 0) {
+      md += `ai_answers: ${totalAiAnswers}\n`;
     }
     md += "---\n\n";
 
     // Title
     md += `# ${title || "Untitled"} — 독서 하이라이트\n\n`;
     let subtitle = `> 📚 ${author || "Unknown"} | 진행률 ${pct}% | 하이라이트 ${highlights.length}개`;
-    if (aiAnswers.size > 0) {
-      subtitle += ` | AI 답변 ${aiAnswers.size}개`;
+    if (totalAiAnswers > 0) {
+      subtitle += ` | AI 답변 ${totalAiAnswers}개`;
     }
     md += subtitle + "\n\n";
 
@@ -106,7 +128,8 @@ export class NoteGenerator {
             epubPath,
             options.includeSourceLink,
             options.questionColor,
-            aiAnswers
+            aiAnswers,
+            preserved
           );
         }
       }
@@ -117,19 +140,18 @@ export class NoteGenerator {
           epubPath,
           options.includeSourceLink,
           options.questionColor,
-          aiAnswers
+          aiAnswers,
+          preserved
         );
       }
     }
 
     // Save
     await this.ensureFolder(options.savePath);
-    const filePath = `${options.savePath}/${safeTitle}.md`;
-    const existing = this.app.vault.getAbstractFileByPath(filePath);
 
-    if (existing && existing instanceof TFile) {
-      await this.app.vault.modify(existing, md);
-      return existing;
+    if (existingFile && existingFile instanceof TFile) {
+      await this.app.vault.modify(existingFile, md);
+      return existingFile;
     } else {
       return await this.app.vault.create(filePath, md);
     }
@@ -140,13 +162,16 @@ export class NoteGenerator {
     epubPath: string,
     includeLink: boolean,
     questionColor: string,
-    aiAnswers: Map<string, string>
+    aiAnswers: Map<string, string>,
+    preserved: Map<string, string>
   ): string {
     const colorEmoji = this.colorToEmoji(hl.color);
     const isQuestion =
       hl.color === questionColor && hl.note.trim().length > 0;
 
-    let block = `> [!quote]+ ${colorEmoji}\n`;
+    // Invisible marker for merge tracking (hidden in Obsidian preview)
+    let block = `%%hl:${hl.id}%%\n`;
+    block += `> [!quote]+ ${colorEmoji}\n`;
     block += `> ${hl.text}\n`;
 
     if (includeLink) {
@@ -154,25 +179,80 @@ export class NoteGenerator {
     }
 
     if (isQuestion) {
-      // Show the question
       block += `>\n> ❓ **${hl.note}**\n`;
       block += "\n";
 
-      // AI answer (collapsed callout)
-      const answer = aiAnswers.get(hl.id);
-      if (answer) {
+      // Priority: 1) new AI answer, 2) preserved answer (by ID), 3) preserved (by question text)
+      const newAnswer = aiAnswers.get(hl.id);
+      const preservedAnswer = preserved.get(hl.id) || preserved.get(hl.note);
+
+      if (newAnswer) {
         block += `> [!tip]- 🤖 AI 답변\n`;
-        for (const line of answer.split("\n")) {
+        for (const line of newAnswer.split("\n")) {
           block += `> ${line}\n`;
         }
+      } else if (preservedAnswer) {
+        block += preservedAnswer;
       }
     } else if (hl.note) {
-      // Regular memo (non-question)
       block += `>\n> 💭 ${hl.note}\n`;
     }
 
     block += "\n";
     return block;
+  }
+
+  /**
+   * Extract preserved AI answer blocks from an existing note.
+   * Returns Map keyed by highlight ID (%%hl:xxx%%) or question text (legacy fallback).
+   * Values are the raw [!tip] block text ready for re-injection.
+   */
+  private extractPreservedBlocks(content: string): Map<string, string> {
+    const preserved = new Map<string, string>();
+    const lines = content.split("\n");
+
+    let currentHlId = "";
+    let currentQuestion = "";
+
+    for (let i = 0; i < lines.length; i++) {
+      // Detect %%hl:xxx%% marker
+      const markerMatch = lines[i].match(/^%%hl:(.+?)%%$/);
+      if (markerMatch) {
+        currentHlId = markerMatch[1];
+        currentQuestion = "";
+        continue;
+      }
+
+      // Detect question line
+      const qMatch = lines[i].match(/^>\s*❓\s*\*\*(.+?)\*\*/);
+      if (qMatch) {
+        currentQuestion = qMatch[1];
+        continue;
+      }
+
+      // Detect [!tip] AI answer block
+      if (lines[i].match(/^>\s*\[!tip\].*AI\s*답변/)) {
+        // Collect the entire [!tip] block (lines starting with >)
+        let tipBlock = lines[i] + "\n";
+        let j = i + 1;
+        while (j < lines.length && lines[j].startsWith(">")) {
+          tipBlock += lines[j] + "\n";
+          j++;
+        }
+
+        // Store by ID (preferred) and by question text (fallback)
+        if (currentHlId) {
+          preserved.set(currentHlId, tipBlock);
+        }
+        if (currentQuestion) {
+          preserved.set(currentQuestion, tipBlock);
+        }
+
+        i = j - 1; // skip processed lines
+      }
+    }
+
+    return preserved;
   }
 
   private async askClaude(
