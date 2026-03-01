@@ -367,6 +367,8 @@ export class EpubReaderView extends TextFileView {
 
     const colors = this.plugin.settings.highlightColors;
 
+    const questionColor = this.plugin.settings.questionColor;
+
     for (const c of colors) {
       const btn = this.highlightPopupEl.createEl("button", {
         cls: "epp-color-btn",
@@ -374,10 +376,15 @@ export class EpubReaderView extends TextFileView {
       btn.style.backgroundColor = c.value;
       btn.setAttribute("title", c.label);
       btn.addEventListener("click", async () => {
-        await this.addHighlight(cfiRange, text, c.name);
-        this.hideHighlightPopup();
-        if (contents?.window?.getSelection) {
-          contents.window.getSelection()?.removeAllRanges();
+        if (c.name === questionColor) {
+          // Blue (question) → show question input before saving
+          this.showQuestionInput(cfiRange, text, c.name, contents);
+        } else {
+          await this.addHighlight(cfiRange, text, c.name);
+          this.hideHighlightPopup();
+          if (contents?.window?.getSelection) {
+            contents.window.getSelection()?.removeAllRanges();
+          }
         }
       });
     }
@@ -401,6 +408,98 @@ export class EpubReaderView extends TextFileView {
 
   private hideHighlightPopup(): void {
     this.highlightPopupEl.addClass("epp-hidden");
+    this.highlightPopupEl.style.width = "";
+  }
+
+  /** Show question input field when blue highlight is selected */
+  private showQuestionInput(
+    cfiRange: string,
+    text: string,
+    colorName: string,
+    contents: any
+  ): void {
+    // Replace popup with question input
+    this.highlightPopupEl.empty();
+
+    const wrapper = this.highlightPopupEl.createDiv({ cls: "epp-question-wrapper" });
+
+    wrapper.createEl("div", {
+      text: "🔵 질문을 입력하세요",
+      cls: "epp-question-label",
+    });
+
+    const input = wrapper.createEl("input", {
+      cls: "epp-question-input",
+      attr: { type: "text", placeholder: "이 구절에 대한 질문..." },
+    });
+
+    const btnRow = wrapper.createDiv({ cls: "epp-question-btn-row" });
+
+    const saveBtn = btnRow.createEl("button", {
+      text: "저장",
+      cls: "epp-btn epp-btn-primary",
+    });
+
+    const skipBtn = btnRow.createEl("button", {
+      text: "질문 없이 저장",
+      cls: "epp-btn",
+    });
+
+    const cancelBtn = btnRow.createEl("button", {
+      text: "취소",
+      cls: "epp-btn",
+    });
+
+    // Save with question
+    const doSave = async () => {
+      const question = input.value.trim();
+      await this.addHighlight(cfiRange, text, colorName);
+      if (question && this.file) {
+        // Find the highlight we just added and update its note
+        const data = await this.store.load(this.file.path);
+        const hl = data.highlights.find((h) => h.cfi === cfiRange);
+        if (hl) {
+          await this.store.updateHighlightNote(this.file.path, hl.id, question);
+        }
+      }
+      this.hideHighlightPopup();
+      if (contents?.window?.getSelection) {
+        contents.window.getSelection()?.removeAllRanges();
+      }
+    };
+
+    saveBtn.addEventListener("click", doSave);
+    input.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Enter") doSave();
+      if (e.key === "Escape") {
+        this.hideHighlightPopup();
+        if (contents?.window?.getSelection) {
+          contents.window.getSelection()?.removeAllRanges();
+        }
+      }
+    });
+
+    // Save without question
+    skipBtn.addEventListener("click", async () => {
+      await this.addHighlight(cfiRange, text, colorName);
+      this.hideHighlightPopup();
+      if (contents?.window?.getSelection) {
+        contents.window.getSelection()?.removeAllRanges();
+      }
+    });
+
+    // Cancel
+    cancelBtn.addEventListener("click", () => {
+      this.hideHighlightPopup();
+      if (contents?.window?.getSelection) {
+        contents.window.getSelection()?.removeAllRanges();
+      }
+    });
+
+    // Resize popup for question input
+    this.highlightPopupEl.style.width = "320px";
+
+    setTimeout(() => input.focus(), 50);
   }
 
   // ─── Highlight CRUD ────────────────────────────
@@ -662,11 +761,20 @@ export class EpubReaderView extends TextFileView {
 
     try {
       const settings = this.plugin.settings;
+      this.statusEl.setText("📝 노트 생성 중...");
+
       const noteFile = await this.noteGen.generate(this.file.path, data, {
         savePath: settings.noteSavePath,
         groupByChapter: true,
         includeSourceLink: true,
         template: settings.noteTemplate,
+        enableAI: settings.enableAI,
+        questionColor: settings.questionColor,
+        aiModel: settings.aiModel,
+        aiTimeout: settings.aiTimeout,
+        onProgress: (current, total) => {
+          this.statusEl.setText(`🤖 AI 답변 생성 중... ${current}/${total}`);
+        },
       });
 
       this.statusEl.setText(`✅ 노트 생성 완료: ${noteFile.path}`);

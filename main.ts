@@ -1,5 +1,6 @@
 import { Plugin, PluginSettingTab, App, Setting, WorkspaceLeaf, TFile } from "obsidian";
 import { EpubReaderView, VIEW_TYPE_EPUB } from "./reader-view";
+import { isClaudeAvailable } from "./claude-bridge";
 
 // ─── Settings ────────────────────────────────────
 
@@ -13,6 +14,10 @@ export interface EpubPlusPlusSettings {
   noteSavePath: string;
   noteTemplate: string;
   highlightColors: HighlightColor[];
+  enableAI: boolean;
+  questionColor: string;
+  aiModel: string;
+  aiTimeout: number;
 }
 
 const DEFAULT_COLORS: HighlightColor[] = [
@@ -26,6 +31,10 @@ const DEFAULT_SETTINGS: EpubPlusPlusSettings = {
   noteSavePath: "3_Resources/독서노트",
   noteTemplate: "SQ3R-독서노트",
   highlightColors: [...DEFAULT_COLORS],
+  enableAI: true,
+  questionColor: "blue",
+  aiModel: "haiku",
+  aiTimeout: 60000,
 };
 
 // ─── Plugin ──────────────────────────────────────
@@ -278,5 +287,69 @@ class EpubPlusPlusSettingTab extends PluginSettingTab {
         this.display();
       })
     );
+
+    // ─── AI Settings ─────────────────────────────
+    containerEl.createEl("h3", { text: "🤖 AI 질문 답변 (Claude Writer 연동)" });
+
+    const claudeOk = isClaudeAvailable(this.app);
+
+    if (!claudeOk) {
+      containerEl.createEl("p", {
+        text: "⚠️ Claude Writer 플러그인이 설치/활성화되어 있지 않습니다. AI 기능을 사용하려면 Claude Writer를 먼저 설치하세요.",
+        cls: "setting-item-description",
+      }).style.color = "var(--text-error)";
+    }
+
+    new Setting(containerEl)
+      .setName("AI 답변 활성화")
+      .setDesc("파란색 질문 하이라이트에 대해 Claude AI가 답변을 생성합니다 (Claude Writer 필요)")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.enableAI).onChange(async (val) => {
+          this.plugin.settings.enableAI = val;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("AI 모델")
+      .setDesc("haiku: 빠르고 저렴 | sonnet: 깊은 분석")
+      .addDropdown((dd) =>
+        dd
+          .addOption("haiku", "Haiku (빠름)")
+          .addOption("sonnet", "Sonnet (정밀)")
+          .setValue(this.plugin.settings.aiModel)
+          .onChange(async (val) => {
+            this.plugin.settings.aiModel = val;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("질문 색상")
+      .setDesc("이 색상의 하이라이트 + 메모가 있으면 AI에게 질문합니다")
+      .addDropdown((dd) => {
+        for (const c of this.plugin.settings.highlightColors) {
+          dd.addOption(c.name, c.label);
+        }
+        dd.setValue(this.plugin.settings.questionColor).onChange(async (val) => {
+          this.plugin.settings.questionColor = val;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("AI 타임아웃 (초)")
+      .setDesc("질문 1개당 최대 대기 시간")
+      .addText((text) =>
+        text
+          .setValue(String(this.plugin.settings.aiTimeout / 1000))
+          .onChange(async (val) => {
+            const n = parseInt(val, 10);
+            if (!isNaN(n) && n > 0) {
+              this.plugin.settings.aiTimeout = n * 1000;
+              await this.plugin.saveSettings();
+            }
+          })
+      );
   }
 }

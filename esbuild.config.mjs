@@ -10,6 +10,7 @@ esbuild
     external: [
       "obsidian",
       "electron",
+      "child_process",
       "@codemirror/autocomplete",
       "@codemirror/collab",
       "@codemirror/commands",
