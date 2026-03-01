@@ -1,7 +1,7 @@
 {
   "id": "epub-plus-plus",
   "name": "EPUB++",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.5.0",
   "description": "Read EPUB files, highlight text with custom colors, and auto-generate structured reading notes.",
   "author": "jasonmoon",
