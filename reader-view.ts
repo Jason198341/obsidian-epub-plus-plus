@@ -58,26 +58,35 @@ export class EpubReaderView extends TextFileView {
   }
 
   // ─── TextFileView required stubs (EPUB is binary) ──
+  // CRITICAL: EPUB is binary. TextFileView's save() calls getViewData()
+  // and writes it back to file. We MUST block this or it overwrites
+  // the EPUB with an empty string → data loss.
 
-  /** Not used — EPUB is binary, we read via readBinary */
   getViewData(): string {
     return "";
   }
 
-  /** Called by Obsidian when file is loaded. We ignore text data and load binary. */
   setViewData(data: string, clear: boolean): void {
     if (clear) {
       this.cleanup();
     }
-    // Load EPUB binary — file is already set by TextFileView
     if (this.file) {
       this.loadEpub(this.file);
     }
   }
 
-  /** Called when view is cleared */
   clear(): void {
     this.cleanup();
+  }
+
+  /** Block save — never overwrite binary EPUB via text pipeline */
+  async save(): Promise<void> {
+    // no-op: prevent TextFileView from writing "" to the EPUB file
+  }
+
+  /** Block debounced save requests */
+  requestSave(): void {
+    // no-op
   }
 
   // ─── EPUB Loading ──────────────────────────────
